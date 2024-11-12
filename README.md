@@ -4,7 +4,7 @@
 
 如果有任何问题，欢迎提出，我会尽力改正。
 
-以下是AI生成，看看就行了，[这是网页版](https://ilovelinuxdo.tech/introduce.html)。
+以下简介是AI生成，看看就行了，[这是网页版简介](https://ilovelinuxdo.tech/introduce.html)。
 
 ## 阅后即焚应用 - OneTimeMessagePHP
 
