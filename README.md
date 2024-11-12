@@ -6,17 +6,16 @@
 
 阅后即焚应用允许您创建只能阅读一次的消息，并在阅读后自动销毁。这可以有效地保护您的隐私和信息安全。
 
-### 二、BurnAfterReadingPHP/OneTimeMessagePHP
+### 二、OneTimeMessagePHP
 
-BurnAfterReadingPHP/OneTimeMessagePHP 是一个简单的 PHP 阅后即焚消息应用。它具有以下特点：
+OneTimeMessagePHP 是一个简单的 PHP 阅后即焚消息应用。它具有以下特点：
 
 - **易于使用:** 您只需要输入您的消息内容，并选择是否设置密码即可创建阅后即焚消息。
-- **安全可靠:** BurnAfterReadingPHP/OneTimeMessagePHP 使用 AES-256-CBC 加密算法和双重加密机制来保护您的消息安全。
-- **开源免费:** BurnAfterReadingPHP/OneTimeMessagePHP 是一个开源项目，您可以免费使用它。
+- **安全可靠:** OneTimeMessagePHP 使用 AES-256-CBC 加密算法和双重加密机制来保护您的消息安全。
+- **开源免费:** OneTimeMessagePHP 是一个开源项目，您可以免费使用它。
 
 ### 三、功能特点
 
 - **创建阅后即焚消息:** 您可以创建只能阅读一次的消息，并在阅读后自动销毁。
 - **密码保护:** 您可以选择设置密码来保护您的消息，只有知道密码的人才能阅读消息。
 - **发件人姓名和备注信息:** 您可以添加发件人姓名和备注信息，以便收件人了解消息的来源和用途。
--
