@@ -55,7 +55,7 @@ OneTimeMessagePHP 是一个使用 PHP 构建的简单且安全的阅后即焚消
 
 1. **使用 Git 克隆代码库:**
     ```bash
-    git clone https://github.com/your-username/OneTimeMessagePHP.git
+    git clone https://github.com/yangtb2024/OneTimeMessagePHP.git
     cd OneTimeMessagePHP
     ```
 
