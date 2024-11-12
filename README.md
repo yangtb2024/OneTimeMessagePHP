@@ -87,11 +87,19 @@ OneTimeMessagePHP 提供了一种简单而有效的方式来分享敏感信息�
 ENCRYPTION_KEY=example_123456
 
 # 设置站点图标（Favicon）的 URL
-# 以下是一些示例图标：
-# SITE_ICON=https://cdn.luogu.com.cn/upload/usericon/644981.png
+# 以下是一些示例图标及其类型：
+
+# 1. Base64 编码的图标
+# SITE_ICON=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVQI12P4//8/AAX+Av7czFnnAAAAAElFTkSuQmCC
+
+# 2. 远程 URL 图标
 # SITE_ICON=https://example.com/favicon.ico
-# SITE_ICON=https://yourwebsite.com/favicon.png
-SITE_ICON=https://cdn.luogu.com.cn/upload/usericon/644981.png
+
+# 3. 服务器路径图标
+# SITE_ICON=/path/to/your/favicon.ico
+
+# 请选择一个适合您需求的图标配置项
+SITE_ICON=https://example.com/favicon.ico
 
 # 设置站点的域名，用于生成消息链接
 # 例如：SITE_DOMAIN=https://ilovelinuxdo.tech
