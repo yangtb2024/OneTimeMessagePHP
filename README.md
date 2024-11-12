@@ -59,7 +59,7 @@ OneTimeMessagePHP 是一个使用 PHP 构建的简单且安全的阅后即焚消
 
 2. **配置 `.env` 文件:**
     - 复制 `.env.example` 文件并将其重命名为 `.env`。
-    - 使用强随机字符串替换 `ENCRYPTION_KEY` 的值。例如：
+    - 使用强随机字符串替换 `ENCRYPTION_KEY` 的值。
 
 3. **设置 Web 服务器:**
     - 将 Web 服务器的文档根目录指向 OneTimeMessagePHP 的 `public` 目录。
