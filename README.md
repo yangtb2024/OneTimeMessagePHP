@@ -2,6 +2,8 @@
 
 - **演示站点:** 您可以访问 [演示站点](https://ilovelinuxdo.tech) 以了解 OneTimeMessagePHP 的实际效果。
 
+如果有任何问题，欢迎提出，我会尽力改正。
+
 以下是AI生成，看看就行了。
 
 ## 阅后即焚应用 - OneTimeMessagePHP
