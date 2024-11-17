@@ -114,3 +114,5 @@ SITE_DOMAIN=https://yourdomain.com
 ### 八、总结
 
 OneTimeMessagePHP 提供了一种简单而有效的方式来分享敏感信息，同时确保信息安全和隐私。请务必仔细阅读安全警告，并采取必要的措施来保护您的信息。
+
+![](https://star-history.com/#yangtb2024/OneTimeMessagePHP&Date)
