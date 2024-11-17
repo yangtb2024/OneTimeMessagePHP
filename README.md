@@ -108,6 +108,8 @@ SITE_DOMAIN=https://yourdomain.com
 
 请根据您的实际需求修改 `.env` 文件中的内容。
 
+![](https://star-history.com/#yangtb2024/OneTimeMessagePHP&Date)
+
 
 ### 八、总结
 
