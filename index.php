@@ -6,9 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>阅后即焚</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
           integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSEqGa+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
           crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
     <?php
     $envFile = parse_ini_file(__DIR__ . '/.env');
     $encryptionKeyFromEnv = $envFile['ENCRYPTION_KEY'];
@@ -78,18 +82,22 @@
         }
 
         .content-box {
-            white-space: pre-wrap;
-            font-size: 18px;
-            line-height: 1.8;
-            padding: 20px;
-            border-radius: 15px;
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            box-sizing: border-box;
-            width: 100%;
-            height: 400px;
+            min-height: 100px;
+            max-height: 500px;
             overflow-y: auto;
-            resize: none;
+            padding: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.2;
+        }
+
+        .content-box.auto-height {
+            max-height: none;
+            height: auto !important;
+            overflow: visible !important;
         }
 
         .content-box::-webkit-scrollbar {
@@ -316,6 +324,80 @@
         .message-box button[type="submit"] {
             width: 100%;
         }
+
+        /* Reset default margins */
+        .markdown * {
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Compact markdown styles */
+        .markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 {
+            margin: 0.3rem 0 0.1rem 0;
+            line-height: 1.2;
+        }
+        
+        .markdown h1 {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .markdown h2 {
+            font-size: 1.7rem;
+            font-weight: bold;
+        }
+        
+        .markdown h3 {
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+        
+        .markdown h4 {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .markdown h5 {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        .markdown h6 {
+            font-size: 1rem;
+            font-weight: bold;
+        }
+        
+        .markdown p {
+            margin: 0.1rem 0;
+            line-height: 1.2;
+        }
+        
+        .markdown ul, .markdown ol {
+            margin: 0.1rem 0;
+            padding-left: 1.2rem;
+        }
+        
+        .markdown li {
+            margin: 0;
+            line-height: 1.2;
+        }
+        
+        .markdown br {
+            display: none;
+        }
+        
+        .options-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .option-item {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
     </style>
 </head>
 
@@ -474,16 +556,47 @@
                         }
                         echo '<div class="content-box-wrapper">';
 
-                        echo '<div class="mb-2">';
+                        echo '<div class="options-container">';
+                        echo '<div class="option-item">';
                         echo '<input type="checkbox" id="markdownCheckbox" name="markdownCheckbox">';
                         echo '<label for="markdownCheckbox" class="ml-2">渲染 Markdown</label>';
                         echo '</div>';
+                        echo '<div class="option-item">';
+                        echo '<input type="checkbox" id="autoHeightCheckbox" name="autoHeightCheckbox">';
+                        echo '<label for="autoHeightCheckbox" class="ml-2">自适应高度</label>';
+                        echo '</div>';
+                        echo '</div>';
 
-                        echo '<div class="content-box" id="message-text">' . htmlspecialchars($decryptedMessage) . '</div>';
+                        echo '<div class="content-box markdown' . (isset($_POST['autoHeightCheckbox']) && $_POST['autoHeightCheckbox'] === 'on' ? ' auto-height' : '') . '" id="message-text">' .
+                            (isset($_POST['markdownCheckbox']) && $_POST['markdownCheckbox'] === 'on' ?
+                            '<div id="markdownContent" style="display:none;">' . htmlspecialchars($decryptedMessage) . '</div>' .
+                            '<div id="renderedContent"></div>' .
+                            '<script>
+                                const renderer = new marked.Renderer();
+                                marked.setOptions({
+                                    renderer: renderer,
+                                    breaks: true,
+                                    gfm: true
+                                });
+                                const renderedContent = document.getElementById("renderedContent");
+                                const markdownContent = document.getElementById("markdownContent");
+                                renderedContent.innerHTML = marked.parse(markdownContent.innerText);
+                                renderMathInElement(renderedContent, {
+                                    delimiters: [
+                                        {left: "$$", right: "$$", display: true},
+                                        {left: "$", right: "$", display: false},
+                                        {left: "\\\\[", right: "\\\\]", display: true},
+                                        {left: "\\\\(", right: "\\\\)", display: false}
+                                    ],
+                                    throwOnError: false,
+                                    output: "html"
+                                });
+                            </script>' :
+                            nl2br(htmlspecialchars($decryptedMessage))) .
+                        '</div>';
                         echo '<button class="copy-button" onclick="copyToClipboard()"><i class="fas fa-copy"></i> 复制</button>';
                         echo '</div>';
 
-                        echo '<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>';
                         echo '<script>
                 function copyToClipboard() {
                   const messageText = document.getElementById("message-text");
@@ -510,14 +623,69 @@
                 const messageText = document.getElementById("message-text");
                 let originalMessage = messageText.innerText;
 
-                markdownCheckbox.addEventListener("change", () => {
+                markdownCheckbox.addEventListener("change", function() {
                     if (markdownCheckbox.checked) {
+                        const renderer = new marked.Renderer();
+                        marked.setOptions({
+                            renderer: renderer,
+                            breaks: true,
+                            gfm: true
+                        });
                         messageText.innerHTML = marked.parse(originalMessage);
+                        renderMathInElement(messageText, {
+                            delimiters: [
+                                {left: "$$", right: "$$", display: true},
+                                {left: "$", right: "$", display: false},
+                                {left: "\\\\[", right: "\\\\]", display: true},
+                                {left: "\\\\(", right: "\\\\)", display: false}
+                            ],
+                            throwOnError: false,
+                            output: "html"
+                        });
                     } else {
-                        messageText.innerHTML = originalMessage; 
+                        messageText.innerHTML = originalMessage;
                     }
                 });
                 </script>';
+                        echo '<script>
+                            document.getElementById("autoHeightCheckbox").addEventListener("change", function() {
+                                const contentBox = document.getElementById("message-text");
+                                if (this.checked) {
+                                    contentBox.classList.add("auto-height");
+                                } else {
+                                    contentBox.classList.remove("auto-height");
+                                }
+                            });
+
+                            document.getElementById("markdownCheckbox").addEventListener("change", function() {
+                                const markdownContent = document.getElementById("markdownContent");
+                                const renderedContent = document.getElementById("renderedContent");
+                                if (this.checked && markdownContent) {
+                                    const renderer = new marked.Renderer();
+                                    marked.setOptions({
+                                        renderer: renderer,
+                                        breaks: true,
+                                        gfm: true
+                                    });
+                                    renderedContent.innerHTML = marked.parse(markdownContent.innerText);
+                                    renderMathInElement(renderedContent, {
+                                        delimiters: [
+                                            {left: "$$", right: "$$", display: true},
+                                            {left: "$", right: "$", display: false},
+                                            {left: "\\\\[", right: "\\\\]", display: true},
+                                            {left: "\\\\(", right: "\\\\)", display: false}
+                                        ],
+                                        throwOnError: false,
+                                        output: "html"
+                                    });
+                                    markdownContent.style.display = "none";
+                                    renderedContent.style.display = "block";
+                                } else if (markdownContent) {
+                                    markdownContent.style.display = "block";
+                                    renderedContent.style.display = "none";
+                                }
+                            });
+                        </script>';
                         echo '</div>';
                     } else {
                         echo '<div class="confirmation-box">';
