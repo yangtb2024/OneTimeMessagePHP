@@ -936,30 +936,38 @@
                         过期时间
                         <span class="text-sm text-gray-500 ml-2">最大允许时间 <?php echo $messageExpiry; ?></span>
                     </label>
-                    <div class="grid grid-cols-4 gap-2">
-                        <div>
-                            <input type="number" id="days" name="expiry_days" min="0" max="365" value="0" 
-                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                oninput="validateTime()">
-                            <label for="days" class="text-sm text-gray-600">天</label>
+                    <div class="flex space-x-2">
+                        <div class="flex-1">
+                            <div class="relative">
+                                <input type="number" id="days" name="expiry_days" min="0" max="365" value="0" 
+                                    class="shadow appearance-none border rounded w-full py-2 pl-3 pr-12 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                                    oninput="validateTime()">
+                                <span class="absolute right-3 top-2 text-gray-600 text-sm">天</span>
+                            </div>
                         </div>
-                        <div>
-                            <input type="number" id="hours" name="expiry_hours" min="0" max="23" value="0"
-                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                oninput="validateTime()">
-                            <label for="hours" class="text-sm text-gray-600">小时</label>
+                        <div class="flex-1">
+                            <div class="relative">
+                                <input type="number" id="hours" name="expiry_hours" min="0" max="23" value="0"
+                                    class="shadow appearance-none border rounded w-full py-2 pl-3 pr-12 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                                    oninput="validateTime()">
+                                <span class="absolute right-3 top-2 text-gray-600 text-sm">时</span>
+                            </div>
                         </div>
-                        <div>
-                            <input type="number" id="minutes" name="expiry_minutes" min="0" max="59" value="0"
-                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                oninput="validateTime()">
-                            <label for="minutes" class="text-sm text-gray-600">分钟</label>
+                        <div class="flex-1">
+                            <div class="relative">
+                                <input type="number" id="minutes" name="expiry_minutes" min="0" max="59" value="0"
+                                    class="shadow appearance-none border rounded w-full py-2 pl-3 pr-12 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                                    oninput="validateTime()">
+                                <span class="absolute right-3 top-2 text-gray-600 text-sm">分</span>
+                            </div>
                         </div>
-                        <div>
-                            <input type="number" id="seconds" name="expiry_seconds" min="0" max="59" value="0"
-                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                oninput="validateTime()">
-                            <label for="seconds" class="text-sm text-gray-600">秒</label>
+                        <div class="flex-1">
+                            <div class="relative">
+                                <input type="number" id="seconds" name="expiry_seconds" min="0" max="59" value="0"
+                                    class="shadow appearance-none border rounded w-full py-2 pl-3 pr-12 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                                    oninput="validateTime()">
+                                <span class="absolute right-3 top-2 text-gray-600 text-sm">秒</span>
+                            </div>
                         </div>
                     </div>
                 </div>
