@@ -935,13 +935,14 @@
                     <label for="expiry" class="form-label">
                         过期时间
                         <span class="text-sm text-gray-500 ml-2">最大允许时间 <?php echo $messageExpiry; ?></span>
+                        <span id="currentExpiry" class="text-sm ml-2">当前设置：0天0时0分0秒</span>
                     </label>
                     <div class="flex space-x-2">
                         <div class="flex-1">
                             <div class="relative">
                                 <input type="number" id="days" name="expiry_days" min="0" max="365" value="0" 
                                     class="shadow appearance-none border rounded w-full py-2 pl-3 pr-12 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                                    oninput="validateTime()">
+                                    oninput="validateAndUpdateTime()">
                                 <span class="absolute right-3 top-2 text-gray-600 text-sm">天</span>
                             </div>
                         </div>
@@ -949,7 +950,7 @@
                             <div class="relative">
                                 <input type="number" id="hours" name="expiry_hours" min="0" max="23" value="0"
                                     class="shadow appearance-none border rounded w-full py-2 pl-3 pr-12 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                                    oninput="validateTime()">
+                                    oninput="validateAndUpdateTime()">
                                 <span class="absolute right-3 top-2 text-gray-600 text-sm">时</span>
                             </div>
                         </div>
@@ -957,7 +958,7 @@
                             <div class="relative">
                                 <input type="number" id="minutes" name="expiry_minutes" min="0" max="59" value="0"
                                     class="shadow appearance-none border rounded w-full py-2 pl-3 pr-12 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                                    oninput="validateTime()">
+                                    oninput="validateAndUpdateTime()">
                                 <span class="absolute right-3 top-2 text-gray-600 text-sm">分</span>
                             </div>
                         </div>
@@ -965,7 +966,7 @@
                             <div class="relative">
                                 <input type="number" id="seconds" name="expiry_seconds" min="0" max="59" value="0"
                                     class="shadow appearance-none border rounded w-full py-2 pl-3 pr-12 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                                    oninput="validateTime()">
+                                    oninput="validateAndUpdateTime()">
                                 <span class="absolute right-3 top-2 text-gray-600 text-sm">秒</span>
                             </div>
                         </div>
@@ -1002,58 +1003,36 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('hours').value = timeValues.hours;
         document.getElementById('minutes').value = timeValues.minutes;
         document.getElementById('seconds').value = timeValues.seconds;
-        validateTime();
+        validateAndUpdateTime();
     }
 });
 
-function validateTime() {
+function validateAndUpdateTime() {
     const days = parseInt(document.getElementById('days').value) || 0;
     const hours = parseInt(document.getElementById('hours').value) || 0;
     const minutes = parseInt(document.getElementById('minutes').value) || 0;
     const seconds = parseInt(document.getElementById('seconds').value) || 0;
 
-    localStorage.setItem('lastExpiryTime', JSON.stringify({
-        days, hours, minutes, seconds
-    }));
+    // 获取最大允许时间
+    const maxTimeStr = '<?php echo $messageExpiry; ?>';
+    const [maxDays, maxHours, maxMinutes, maxSeconds] = maxTimeStr.split(':').map(Number);
 
-    const totalSeconds = (days * 24 * 60 * 60) + (hours * 60 * 60) + (minutes * 60) + seconds;
-    const warning = document.getElementById('timeWarning');
-    const inputs = document.querySelectorAll('input[type="number"]');
-    const totalTimeSpan = document.getElementById('totalTime');
+    // 计算总秒数
+    const currentTotalSeconds = days * 86400 + hours * 3600 + minutes * 60 + seconds;
+    const maxTotalSeconds = maxDays * 86400 + maxHours * 3600 + maxMinutes * 60 + maxSeconds;
 
-    if (totalSeconds > maxTotalSeconds) {
-        totalTimeSpan.textContent = '总时间: ' + formatTime(days, hours, minutes, seconds);
-        warning.textContent = `（超过最大允许时间 <?php echo $messageExpiry; ?>）`;
-        warning.classList.remove('text-gray-500');
-        warning.classList.add('text-red-500');
-        totalTimeSpan.classList.add('text-red-500');
-        inputs.forEach(input => {
-            input.classList.add('border-red-500');
-        });
-    } else if (totalSeconds === 0) {
-        totalTimeSpan.textContent = '总时间: ' + formatTime(maxDays, maxHours, maxMinutes, maxSeconds);
-        warning.textContent = `（将使用系统默认时间 <?php echo $messageExpiry; ?>）`;
-        warning.classList.remove('text-red-500');
-        warning.classList.add('text-gray-500');
-        totalTimeSpan.classList.remove('text-red-500');
-        inputs.forEach(input => {
-            input.classList.remove('border-red-500');
-        });
+    // 更新显示
+    const currentExpiry = document.getElementById('currentExpiry');
+    currentExpiry.textContent = `当前设置：${days}天${hours}时${minutes}分${seconds}秒`;
+    
+    // 检查是否超出限制
+    if (currentTotalSeconds > maxTotalSeconds) {
+        currentExpiry.classList.add('text-red-500');
+        currentExpiry.classList.remove('text-gray-500');
     } else {
-        totalTimeSpan.textContent = '总时间: ' + formatTime(days, hours, minutes, seconds);
-        warning.textContent = `（最大允许时间 <?php echo $messageExpiry; ?>）`;
-        warning.classList.remove('text-red-500');
-        warning.classList.add('text-gray-500');
-        totalTimeSpan.classList.remove('text-red-500');
-        inputs.forEach(input => {
-            input.classList.remove('border-red-500');
-        });
+        currentExpiry.classList.remove('text-red-500');
+        currentExpiry.classList.add('text-gray-500');
     }
-
-    document.getElementById('days').value = Math.min(Math.max(days, 0), 365);
-    document.getElementById('hours').value = Math.min(Math.max(hours, 0), 23);
-    document.getElementById('minutes').value = Math.min(Math.max(minutes, 0), 59);
-    document.getElementById('seconds').value = Math.min(Math.max(seconds, 0), 59);
 }
 
 function autoResize() {
