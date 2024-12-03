@@ -18,9 +18,13 @@
     $encryptionKeyFromEnv = $envFile['ENCRYPTION_KEY'];
     $siteIcon = $envFile['SITE_ICON'];
     $siteDomain = $envFile['SITE_DOMAIN'];
+    $messageExpiry = isset($envFile['MESSAGE_EXPIRY']) ? $envFile['MESSAGE_EXPIRY'] : '7:0:0:0';
+
+    list($days, $hours, $minutes, $seconds) = array_pad(explode(':', $messageExpiry), 4, 0);
+    $expirySeconds = ($days * 24 * 60 * 60) + ($hours * 60 * 60) + ($minutes * 60) + $seconds;
 
     if (!empty($siteIcon)) {
-        if (strpos($siteIcon, 'data:image') === 0) {
+        if (str_starts_with($siteIcon, 'data:image')) {
             echo '<link rel="icon" href="' . htmlspecialchars($siteIcon) . '">';
         } else {
             echo '<link rel="icon" href="' . htmlspecialchars($siteIcon) . '" type="image/x-icon">';
@@ -325,13 +329,11 @@
             width: 100%;
         }
 
-        /* Reset default margins */
         .markdown * {
             margin: 0;
             padding: 0;
         }
         
-        /* Compact markdown styles */
         .markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 {
             margin: 0.3rem 0 0.1rem 0;
             line-height: 1.2;
@@ -397,6 +399,103 @@
             display: flex;
             align-items: center;
             white-space: nowrap;
+        }
+        
+        .tab-active {
+            border-bottom: 2px solid #3b82f6;
+            color: #3b82f6;
+            background-color: #f8fafc;
+        }
+        .editor-container {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+            background-color: white;
+            overflow: hidden;
+        }
+        .editor-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            background-color: #f8fafc;
+        }
+        .editor-tabs {
+            display: flex;
+            gap: 1px;
+        }
+        .editor-tab {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+        .editor-options {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .content-area {
+            padding: 1rem;
+        }
+        .editor-content {
+            width: 100%;
+            height: 200px;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            background-color: white;
+            overflow-y: auto;
+        }
+        #message {
+            width: 100%;
+            height: 100%;
+            resize: none;
+            outline: none;
+            border: none;
+            padding: 0;
+            display: block;
+        }
+        .auto-height .editor-container {
+            overflow: visible;
+        }
+        .auto-height .editor-content {
+            height: auto;
+            min-height: 200px;
+            overflow: visible;
+        }
+        .auto-height #message {
+            height: 100% !important;
+        }
+        .markdown {
+            line-height: 1.6;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+        .form-label .optional,
+        .form-label .markdown-support,
+        .form-label .time-limit {
+            font-size: 0.875rem;
+            font-weight: normal;
+            color: #6B7280;
+            margin-left: 0.5rem;
+        }
+        
+        .form-label .optional,
+        .form-label .markdown-support,
+        .form-label .time-limit {
+            font-size: 0.875rem;
+            font-weight: normal;
+            color: #6B7280;
+            margin-left: 0.5rem;
+            text-sm text-gray-500 ml-2;
         }
     </style>
 </head>
@@ -467,62 +566,93 @@
         $senderName = isset($_POST['senderName']) ? sanitizeInput($_POST['senderName']) : '';
         $senderNote = isset($_POST['senderNote']) ? sanitizeInput($_POST['senderNote']) : '';
         $senderPassword = isset($_POST['senderPassword']) ? sanitizeInput($_POST['senderPassword']) : '';
-        $message = isset($_POST['message']) ? sanitizeInput($_POST['message']) : '';
 
-        if (empty($message)) {
+        $userDays = isset($_POST['expiry_days']) ? intval($_POST['expiry_days']) : 0;
+        $userHours = isset($_POST['expiry_hours']) ? intval($_POST['expiry_hours']) : 0;
+        $userMinutes = isset($_POST['expiry_minutes']) ? intval($_POST['expiry_minutes']) : 0;
+        $userSeconds = isset($_POST['expiry_seconds']) ? intval($_POST['expiry_seconds']) : 0;
+        
+        $userExpirySeconds = ($userDays * 24 * 60 * 60) + ($userHours * 60 * 60) + ($userMinutes * 60) + $userSeconds;
+        
+        if ($userExpirySeconds > $expirySeconds) {
             echo '<div class="message-box mb-6">';
-            echo '<p class="text-red-500">消息不能为空。</p>';
+            echo '<p class="text-red-500">设置的过期时间超过系统允许的最大值（' . $messageExpiry . '）。</p>';
             echo '</div>';
             exit;
         }
 
-        $verificationCode = generateVerificationCode();
-        $hashedVerificationCode = hashVerificationCode($verificationCode);
-        $hashedSenderPassword = hashPassword($senderPassword);
+        if (!empty($_POST['message'])) {
+            $content = $_POST['message'];
 
-        $randomKey = generateEncryptionKey();
-        $encryptedMessage = encrypt($message, $randomKey);
-        $encryptedSenderName = encrypt($senderName, $randomKey);
-        $encryptedSenderNote = encrypt($senderNote, $randomKey);
+            $verificationCode = generateVerificationCode();
+            $hashedVerificationCode = hashVerificationCode($verificationCode);
+            $hashedSenderPassword = hashPassword($senderPassword);
 
-        $keyEncryptedWithVerificationCode = encrypt($randomKey, $hashedVerificationCode);
-        $keyEncryptedWithSenderPassword = $hashedSenderPassword ? encrypt($randomKey, $hashedSenderPassword) : null;
+            $randomKey = generateEncryptionKey();
+            $encryptedMessage = encrypt($content, $randomKey);
+            $encryptedSenderName = encrypt($senderName, $randomKey);
+            $encryptedSenderNote = encrypt($senderNote, $randomKey);
 
-        $filename = generateRandomFilename();
+            $keyEncryptedWithVerificationCode = encrypt($randomKey, $hashedVerificationCode);
+            $keyEncryptedWithSenderPassword = $hashedSenderPassword ? encrypt($randomKey, $hashedSenderPassword) : null;
 
-        if (!file_exists('messages')) mkdir('messages', 0755, true);
+            $filename = generateRandomFilename();
 
-        file_put_contents($filename, json_encode([
-            'senderNameEncrypted' => $encryptedSenderName,
-            'senderNoteEncrypted' => $encryptedSenderNote,
-            'senderPasswordHash' => $hashedSenderPassword,
-            'messageEncrypted' => $encryptedMessage,
-            'keyEncryptedWithVerificationCode' => $keyEncryptedWithVerificationCode,
-            'keyEncryptedWithSenderPassword' => $keyEncryptedWithSenderPassword,
-            'hashedVerificationCode' => $hashedVerificationCode
-        ]), LOCK_EX);
+            if (!file_exists('messages')) mkdir('messages', 0755, true);
 
-        $messageLink = "?file=" . urlencode(basename($filename)) . "&code=" . urlencode($verificationCode);
+            $messageData = [
+                'senderNameEncrypted' => $encryptedSenderName,
+                'senderNoteEncrypted' => $encryptedSenderNote,
+                'senderPasswordHash' => $hashedSenderPassword,
+                'messageEncrypted' => $encryptedMessage,
+                'keyEncryptedWithVerificationCode' => $keyEncryptedWithVerificationCode,
+                'keyEncryptedWithSenderPassword' => $keyEncryptedWithSenderPassword,
+                'hashedVerificationCode' => $hashedVerificationCode,
+                'createdAt' => time(),
+                'expirySeconds' => $userExpirySeconds > 0 ? $userExpirySeconds : $expirySeconds
+            ];
 
-        echo '<div class="message-box mb-6 bg-green-100">';
-        echo '<h2 class="text-gray-700 text-center mb-2">您的阅后即焚链接</h2>';
-        echo '<div class="message-link-container" onclick="copyLinkToClipboard()">';
-        echo '<span id="messageLink">' . htmlspecialchars($siteDomain) . '/' . htmlspecialchars($messageLink) . '</span>';
-        echo '</div>';
-        echo '</div>';
-        echo '<script>
+            file_put_contents($filename, json_encode($messageData), LOCK_EX);
+
+            $messageLink = "?file=" . urlencode(basename($filename)) . "&code=" . urlencode($verificationCode);
+
+            echo '<div class="message-box mb-6 bg-green-100">';
+            echo '<h2 class="text-gray-700 text-center mb-2">您的阅后即焚链接</h2>';
+            echo '<div class="message-link-container" onclick="copyLinkToClipboard()">';
+            echo '<span id="messageLink">' . htmlspecialchars($siteDomain) . '/' . htmlspecialchars($messageLink) . '</span>';
+            echo '</div>';
+            echo '</div>';
+            echo '<script>
         function copyLinkToClipboard() {
         const messageLink = document.getElementById("messageLink").innerText;
         navigator.clipboard.writeText(messageLink);
         alert("链接已复制到剪贴板！");
         }
         </script>';
+        } else {
+            echo '<div class="message-box mb-6">';
+            echo '<p class="text-red-500">消息不能为空。</p>';
+            echo '</div>';
+            exit;
+        }
     } else if (isset($_GET['file']) && isset($_GET['code'])) {
         $filename = basename($_GET['file']);
         $verificationCode = sanitizeInput($_GET['code']);
 
         if (file_exists("messages/$filename")) {
             $messageData = json_decode(file_get_contents("messages/$filename"), true);
+
+            $createdAt = isset($messageData['createdAt']) ? $messageData['createdAt'] : 0;
+            $currentTime = time();
+            $messageExpirySeconds = isset($messageData['expirySeconds']) ? $messageData['expirySeconds'] : $expirySeconds;
+            
+            if ($currentTime - $createdAt > $messageExpirySeconds) {
+                unlink("messages/$filename");
+                echo '<div class="message-box mb-6">';
+                echo '<p class="text-red-500">消息已过期。</p>';
+                echo '</div>';
+                exit;
+            }
 
             if (isset($messageData['hashedVerificationCode']) && hashVerificationCode($verificationCode) === $messageData['hashedVerificationCode']) {
                 if (isset($_GET['confirm'])) {
@@ -567,8 +697,8 @@
                         echo '</div>';
                         echo '</div>';
 
-                        echo '<div class="content-box markdown' . (isset($_POST['autoHeightCheckbox']) && $_POST['autoHeightCheckbox'] === 'on' ? ' auto-height' : '') . '" id="message-text">' .
-                            (isset($_POST['markdownCheckbox']) && $_POST['markdownCheckbox'] === 'on' ?
+                        echo '<div class="content-box markdown' . (isset($_POST['autoHeightCheckbox']) && $_POST['autoHeightCheckbox'] === 'on' ? ' auto-height' : '') . '" id="message-text">' . 
+                            (isset($_POST['markdownCheckbox']) && $_POST['markdownCheckbox'] === 'on' ? 
                             '<div id="markdownContent" style="display:none;">' . htmlspecialchars($decryptedMessage) . '</div>' .
                             '<div id="renderedContent"></div>' .
                             '<script>
@@ -591,8 +721,8 @@
                                     throwOnError: false,
                                     output: "html"
                                 });
-                            </script>' :
-                            nl2br(htmlspecialchars($decryptedMessage))) .
+                            </script>' : 
+                            nl2br(htmlspecialchars($decryptedMessage))) . 
                         '</div>';
                         echo '<button class="copy-button" onclick="copyToClipboard()"><i class="fas fa-copy"></i> 复制</button>';
                         echo '</div>';
@@ -643,7 +773,7 @@
                             output: "html"
                         });
                     } else {
-                        messageText.innerHTML = originalMessage;
+                        messageText.innerHTML = originalMessage; 
                     }
                 });
                 </script>';
@@ -742,28 +872,96 @@
             <h2 class="text-2xl font-bold mb-4 text-center">发送阅后即焚消息</h2>
             <form method="POST">
                 <div class="mb-4">
-                    <label for="senderName" class="block text-gray-700 font-bold mb-2">您的名字（可选）:</label>
+                    <label for="senderName" class="form-label">
+                        您的名字
+                        <span class="text-sm text-gray-500 ml-2">可选</span>
+                    </label>
                     <input type="text" id="senderName" name="senderName"
                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                            placeholder="请输入您的名字">
                 </div>
                 <div class="mb-4">
-                    <label for="senderNote" class="block text-gray-700 font-bold mb-2">备注（可选）:</label>
+                    <label for="senderNote" class="form-label">
+                        备注
+                        <span class="text-sm text-gray-500 ml-2">可选</span>
+                    </label>
                     <input type="text" id="senderNote" name="senderNote"
                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                            placeholder="请输入备注">
                 </div>
                 <div class="mb-4">
-                    <label for="senderPassword" class="block text-gray-700 font-bold mb-2">设置密码（可选）:</label>
+                    <label for="senderPassword" class="form-label">
+                        设置密码
+                        <span class="text-sm text-gray-500 ml-2">可选</span>
+                    </label>
                     <input type="password" id="senderPassword" name="senderPassword"
                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                            placeholder="请输入密码">
                 </div>
                 <div class="mb-4">
-                    <label for="message" class="block text-gray-700 font-bold mb-2">消息内容:</label>
-                    <textarea id="message" name="message"
-                              class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                              placeholder="请输入消息内容" rows="5" required></textarea>
+                    <label for="message" class="form-label">
+                        消息内容
+                        <span class="text-sm text-gray-500 ml-2">支持 Markdown 格式</span>
+                    </label>
+                    <div class="editor-container shadow">
+                        <div class="editor-toolbar">
+                            <div class="editor-tabs">
+                                <button type="button" id="editTab" 
+                                    class="editor-tab tab-active"
+                                    onclick="switchTab('edit')">编辑</button>
+                                <button type="button" id="previewTab" 
+                                    class="editor-tab"
+                                    onclick="switchTab('preview')">预览</button>
+                            </div>
+                            <div class="editor-options">
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="autoHeight" class="mr-2" onchange="toggleAutoHeight()">
+                                    <span class="text-sm text-gray-500 ml-2">自适应高度</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="editArea" class="content-area">
+                            <div class="editor-content">
+                                <textarea id="message" name="message" required 
+                                    oninput="updatePreview(); autoResize();"></textarea>
+                            </div>
+                        </div>
+                        <div id="previewArea" class="content-area hidden">
+                            <div class="editor-content markdown"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="expiry" class="form-label">
+                        过期时间
+                        <span class="text-sm text-gray-500 ml-2">最大允许时间 <?php echo $messageExpiry; ?></span>
+                    </label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <div>
+                            <input type="number" id="days" name="expiry_days" min="0" max="365" value="0" 
+                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                oninput="validateTime()">
+                            <label for="days" class="text-sm text-gray-600">天</label>
+                        </div>
+                        <div>
+                            <input type="number" id="hours" name="expiry_hours" min="0" max="23" value="0"
+                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                oninput="validateTime()">
+                            <label for="hours" class="text-sm text-gray-600">小时</label>
+                        </div>
+                        <div>
+                            <input type="number" id="minutes" name="expiry_minutes" min="0" max="59" value="0"
+                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                oninput="validateTime()">
+                            <label for="minutes" class="text-sm text-gray-600">分钟</label>
+                        </div>
+                        <div>
+                            <input type="number" id="seconds" name="expiry_seconds" min="0" max="59" value="0"
+                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                oninput="validateTime()">
+                            <label for="seconds" class="text-sm text-gray-600">秒</label>
+                        </div>
+                    </div>
                 </div>
                 <button type="submit"
                         class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full">发送</button>
@@ -771,6 +969,178 @@
         </div>
 
     <?php } ?>
+
+</div>
+
+<script>
+const maxTimeStr = '<?php echo $messageExpiry; ?>';
+const [maxDays, maxHours, maxMinutes, maxSeconds] = maxTimeStr.split(':').map(Number);
+const maxTotalSeconds = (maxDays * 24 * 60 * 60) + (maxHours * 60 * 60) + (maxMinutes * 60) + maxSeconds;
+
+function formatTime(days, hours, minutes, seconds) {
+    let timeText = [];
+    if (days > 0) timeText.push(days + '天');
+    if (hours > 0) timeText.push(hours + '小时');
+    if (minutes > 0) timeText.push(minutes + '分钟');
+    if (seconds > 0) timeText.push(seconds + '秒');
+    return timeText.length > 0 ? timeText.join(' ') : '0秒';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const savedTime = localStorage.getItem('lastExpiryTime');
+    if (savedTime) {
+        const timeValues = JSON.parse(savedTime);
+        document.getElementById('days').value = timeValues.days;
+        document.getElementById('hours').value = timeValues.hours;
+        document.getElementById('minutes').value = timeValues.minutes;
+        document.getElementById('seconds').value = timeValues.seconds;
+        validateTime();
+    }
+});
+
+function validateTime() {
+    const days = parseInt(document.getElementById('days').value) || 0;
+    const hours = parseInt(document.getElementById('hours').value) || 0;
+    const minutes = parseInt(document.getElementById('minutes').value) || 0;
+    const seconds = parseInt(document.getElementById('seconds').value) || 0;
+
+    localStorage.setItem('lastExpiryTime', JSON.stringify({
+        days, hours, minutes, seconds
+    }));
+
+    const totalSeconds = (days * 24 * 60 * 60) + (hours * 60 * 60) + (minutes * 60) + seconds;
+    const warning = document.getElementById('timeWarning');
+    const inputs = document.querySelectorAll('input[type="number"]');
+    const totalTimeSpan = document.getElementById('totalTime');
+
+    if (totalSeconds > maxTotalSeconds) {
+        totalTimeSpan.textContent = '总时间: ' + formatTime(days, hours, minutes, seconds);
+        warning.textContent = `（超过最大允许时间 <?php echo $messageExpiry; ?>）`;
+        warning.classList.remove('text-gray-500');
+        warning.classList.add('text-red-500');
+        totalTimeSpan.classList.add('text-red-500');
+        inputs.forEach(input => {
+            input.classList.add('border-red-500');
+        });
+    } else if (totalSeconds === 0) {
+        totalTimeSpan.textContent = '总时间: ' + formatTime(maxDays, maxHours, maxMinutes, maxSeconds);
+        warning.textContent = `（将使用系统默认时间 <?php echo $messageExpiry; ?>）`;
+        warning.classList.remove('text-red-500');
+        warning.classList.add('text-gray-500');
+        totalTimeSpan.classList.remove('text-red-500');
+        inputs.forEach(input => {
+            input.classList.remove('border-red-500');
+        });
+    } else {
+        totalTimeSpan.textContent = '总时间: ' + formatTime(days, hours, minutes, seconds);
+        warning.textContent = `（最大允许时间 <?php echo $messageExpiry; ?>）`;
+        warning.classList.remove('text-red-500');
+        warning.classList.add('text-gray-500');
+        totalTimeSpan.classList.remove('text-red-500');
+        inputs.forEach(input => {
+            input.classList.remove('border-red-500');
+        });
+    }
+
+    document.getElementById('days').value = Math.min(Math.max(days, 0), 365);
+    document.getElementById('hours').value = Math.min(Math.max(hours, 0), 23);
+    document.getElementById('minutes').value = Math.min(Math.max(minutes, 0), 59);
+    document.getElementById('seconds').value = Math.min(Math.max(seconds, 0), 59);
+}
+
+function autoResize() {
+    const message = document.getElementById('message');
+    const editorContent = message.closest('.editor-content');
+    const previewContent = document.getElementById('previewArea').querySelector('.editor-content');
+    
+    if (document.getElementById('autoHeight').checked) {
+        const newHeight = Math.max(200, message.scrollHeight);
+        editorContent.style.height = newHeight + 'px';
+        previewContent.style.height = 'auto';
+        const previewHeight = Math.max(newHeight, previewContent.scrollHeight);
+        previewContent.style.height = previewHeight + 'px';
+    }
+}
+
+function toggleAutoHeight() {
+    const isAutoHeight = document.getElementById('autoHeight').checked;
+    const editArea = document.getElementById('editArea');
+    const previewArea = document.getElementById('previewArea');
+    
+    if (isAutoHeight) {
+        editArea.classList.add('auto-height');
+        previewArea.classList.add('auto-height');
+        autoResize();
+    } else {
+        editArea.classList.remove('auto-height');
+        previewArea.classList.remove('auto-height');
+        const editorContent = document.getElementById('editArea').querySelector('.editor-content');
+        const previewContent = previewArea.querySelector('.editor-content');
+        editorContent.style.height = '200px';
+        previewContent.style.height = '200px';
+    }
+}
+
+function switchTab(tab) {
+    const editTab = document.getElementById('editTab');
+    const previewTab = document.getElementById('previewTab');
+    const editArea = document.getElementById('editArea');
+    const previewArea = document.getElementById('previewArea');
+
+    if (tab === 'edit') {
+        editTab.classList.add('tab-active');
+        previewTab.classList.remove('tab-active');
+        editArea.classList.remove('hidden');
+        previewArea.classList.add('hidden');
+    } else {
+        editTab.classList.remove('tab-active');
+        previewTab.classList.add('tab-active');
+        editArea.classList.add('hidden');
+        previewArea.classList.remove('hidden');
+        updatePreview();
+    }
+}
+
+function updatePreview() {
+    const messageContent = document.getElementById('message').value;
+    const previewElement = document.getElementById('previewArea').querySelector('.editor-content');
+    previewElement.innerHTML = marked.parse(messageContent);
+    renderMathInElement(previewElement, {
+        delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false}
+        ]
+    });
+
+    if (document.getElementById('autoHeight').checked) {
+        autoResize();
+    }
+}
+
+document.getElementById('message').addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 4;
+        updatePreview();
+    }
+});
+
+document.getElementById('message').addEventListener('input', function() {
+    if (document.getElementById('autoHeight').checked) {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    }
+});
+
+document.querySelectorAll('input[type="number"]').forEach(input => {
+    input.addEventListener('wheel', function(e) {
+        e.preventDefault();
+    });
+});
+</script>
 
 </div>
 
