@@ -996,15 +996,19 @@ function formatTime(days, hours, minutes, seconds) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const savedTime = localStorage.getItem('lastExpiryTime');
-    if (savedTime) {
-        const timeValues = JSON.parse(savedTime);
-        document.getElementById('days').value = timeValues.days;
-        document.getElementById('hours').value = timeValues.hours;
-        document.getElementById('minutes').value = timeValues.minutes;
-        document.getElementById('seconds').value = timeValues.seconds;
-        validateAndUpdateTime();
+    const lastTime = localStorage.getItem('lastExpiryTime');
+    if (lastTime) {
+        try {
+            const timeValues = JSON.parse(lastTime);
+            document.getElementById('days').value = timeValues.days || 0;
+            document.getElementById('hours').value = timeValues.hours || 0;
+            document.getElementById('minutes').value = timeValues.minutes || 0;
+            document.getElementById('seconds').value = timeValues.seconds || 0;
+        } catch (e) {
+            console.error('Error restoring last expiry time:', e);
+        }
     }
+    validateAndUpdateTime();
 });
 
 function validateAndUpdateTime() {
@@ -1013,19 +1017,19 @@ function validateAndUpdateTime() {
     const minutes = parseInt(document.getElementById('minutes').value) || 0;
     const seconds = parseInt(document.getElementById('seconds').value) || 0;
 
-    // 获取最大允许时间
     const maxTimeStr = '<?php echo $messageExpiry; ?>';
     const [maxDays, maxHours, maxMinutes, maxSeconds] = maxTimeStr.split(':').map(Number);
 
-    // 计算总秒数
     const currentTotalSeconds = days * 86400 + hours * 3600 + minutes * 60 + seconds;
     const maxTotalSeconds = maxDays * 86400 + maxHours * 3600 + maxMinutes * 60 + maxSeconds;
 
-    // 更新显示
+    localStorage.setItem('lastExpiryTime', JSON.stringify({
+        days, hours, minutes, seconds
+    }));
+
     const currentExpiry = document.getElementById('currentExpiry');
     currentExpiry.textContent = `当前设置：${days}天${hours}时${minutes}分${seconds}秒`;
     
-    // 检查是否超出限制
     if (currentTotalSeconds > maxTotalSeconds) {
         currentExpiry.classList.add('text-red-500');
         currentExpiry.classList.remove('text-gray-500');
